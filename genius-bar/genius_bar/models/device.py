@@ -7,9 +7,9 @@ from .user import GeniusUser
 from .base_query import BaseQuery
 
 
-class GeniusDevice(Base, BaseMixin):
+class GeniusDevice(Base):
     __tablename__ = 'genius_device'
-
+    id = sa.Column(sa.Integer, primary_key=True)
     device_name = sa.Column(sa.Unicode(16), nullable=False, unique=True)
     os_version = sa.Column(sa.Unicode(16))
     description = sa.Column(sa.Unicode(32))
@@ -35,7 +35,6 @@ class GeniusDeviceQuery(BaseQuery):
         try:
             return session.query(GeniusDevice)\
                 .filter(GeniusDevice.device_name == device_name)\
-                .filter(GeniusDevice.delete == False)\
                 .one()
         except exc.NoResultFound:
             return None

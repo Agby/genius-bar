@@ -16,6 +16,4 @@ from .base_query import *
 log = logging.getLogger(__name__)
 
 # Register the sa event, for timestamp or any custom event
-GeniusUser.register()
-GeniusDevice.register()
 GeniusEvent.register()

@@ -6,9 +6,10 @@ from .base import Base, BaseMixin
 from .base_query import BaseQuery
 
 
-class GeniusUser(Base, BaseMixin):
+class GeniusUser(Base):
+    
     __tablename__ = 'genius_user'
-
+    id = sa.Column(sa.Integer, primary_key=True)
     user_name = sa.Column(sa.Unicode(16), nullable=False, unique=True)
     slack_user_id = sa.Column(sa.Unicode(16), nullable=False, unique=True)
 
