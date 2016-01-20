@@ -45,7 +45,7 @@ def upgrade():
         sa.Column('user_id', sa.Integer, sa.ForeignKey('genius_user.id', 
             onupdate='CASCADE', ondelete='CASCADE')),
         sa.Column('event_time', sa.DateTime),
-        sa.Column('event_type', sa.Integer, server_default=1),
+        sa.Column('event_type', sa.Unicode(16)),
         mysql_engine='InnoDB'
     )
 
