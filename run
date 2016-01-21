@@ -1,0 +1,4 @@
+set -e
+python3.5 setup.py develop
+alembic -c development.ini upgrade head
+pserve development.ini http_port=${PORT}
