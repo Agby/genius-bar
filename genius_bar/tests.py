@@ -17,7 +17,7 @@ def _initTestingDB():
         Base,
         BaseQuery,
     )
-    sqlalchemy_url = "mysql+pymysql://root:password@localhost:3306/genius_bar_test?charset=utf8"
+    sqlalchemy_url = "mysql+pymysql://root@localhost:3306/genius_bar_test?charset=utf8"
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind=engine)
     Base.metadata.bind = engine
