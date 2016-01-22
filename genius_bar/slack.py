@@ -55,7 +55,15 @@ class SlackManager(object):
     def devicecheckout(self):
         return "devicecheckout"
     def devicelist(self):
-        return "devicelist"
+        query_device = GeniusDeviceQuery.get_enable_device(self.session)
+        message = "\nDevice id\tDevice name\tHolder\n"
+        logging.info(query_device)
+        for x in query_device:
+            message = message + ("%s\t%s\t%s\n" % (str(x.id), x.device_name, x.genius_user.user_name ))
+        logging.info(message)
+        rtn = {"text": "Devic List",
+                               "attachments": [{"color" : "good" , "text" : message}]}
+        return rtn
     def devicereg(self):
         try:
             self.session.flush()

@@ -26,6 +26,7 @@ class GeniusDeviceQuery(BaseQuery):
     def get_enable_device(session):
         try:
             return session.query(GeniusDevice)\
+                .join(GeniusUser)\
                 .filter(GeniusDevice.delete == False)\
                 .all()
         except exc.NoResultFound:
