@@ -1,5 +1,6 @@
 import logging
 import pyramid.threadlocal
+import requests
 from sqlalchemy import create_engine
 from sqlalchemy import DDL
 from genius_bar.models.user import GeniusUser, GeniusUserQuery
@@ -47,6 +48,7 @@ class SlackManager(object):
             except Exception as e:
                 logging.info(e)
                 rtn = "command not found or argument!"
+            DBSession.remove()
             return rtn
         else:
             return "token fail"
@@ -55,13 +57,14 @@ class SlackManager(object):
     def devicecheckout(self):
         return "devicecheckout"
     def devicelist(self):
+        self.session.flush()
         query_device = GeniusDeviceQuery.get_enable_device(self.session)
-        message = "\nDevice id\tDevice name\tHolder\n"
+        message = "\nDevice name -> Holder\n"
         logging.info(query_device)
         for x in query_device:
-            message = message + ("%s\t%s\t%s\n" % (str(x.id), x.device_name, x.genius_user.user_name ))
+            message = message + ("%s  ->  %s\n" % (x.device_name, x.genius_user.user_name ))
         logging.info(message)
-        rtn = {"text": "Devic List",
+        rtn = {"text": "Device List",
                                "attachments": [{"color" : "good" , "text" : message}]}
         return rtn
     def devicereg(self):
@@ -87,12 +90,10 @@ class SlackManager(object):
                                "attachments": [{"color" : "good" , "text" : message}]}
                 self.add_event("reg", check_device.id, check_user.id)
             else:
-                rtn = {"text": "Device is already registed! Maybe you need to regist with a new name"}
+                rtn = {"text": "Device is already exist! Maybe you need to regist with a new name."}
         except Exception as e:
             self.session.rollback()
             print(e)
-        #payload = {"text": "test message"}
-        #r = requests.post("https://hooks.slack.com/services/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", json=payload)
         return rtn
     def devicedereg(self):
         try:
@@ -111,8 +112,11 @@ class SlackManager(object):
                 message = "Device id: " + str(check_device.id) + "  Device name: " + check_device.device_name
                 logging.info(message)
                 rtn = {"text": "Deregist finisth!",
-                               "attachments": [{"color" : "good" , "text" : message}]}
+                               "attachments": [{"color" : "warning" , "text" : message}]}
                 self.add_event("dereg", check_device.id, check_user.id)
+                payloadmsg = "[%s] deregist the device [%s]" % (check_user.user_name, check_device.device_name)
+                payload = {"color" : "warning", "text": payloadmsg}
+                r = requests.post("https://hooks.slack.com/services/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", json=payload)
             else:
                 rtn = {"text": "Device not exist!"}
         except Exception as e:
