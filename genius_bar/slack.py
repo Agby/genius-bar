@@ -1,18 +1,35 @@
 import logging
-import requests
+import pyramid.threadlocal
 
 class SlackManager(object):
-    def __init__(self, body_list):
-        self.accedlist = body_list
+    def __init__(self, request):
+        self.request = request
+        self.rqbody = request.params
+
+    def check_token(self):
+        registry = pyramid.threadlocal.get_current_registry()
+        settings = registry.settings
+        token_list = []
+
+        token_list.append(settings['device_checkout_token'])
+        token_list.append(settings['device_list_token'])
+        token_list.append(settings['device_reg_token'])
+        token_list.append(settings['device_dereg_token'])
+        token_list.append(settings['device_audit_token']) 
+
+        return self.request.params['token'] in token_list
 
     def command_manager(self):
-        cmdname = self.accedlist['command'].split("/")
-        try:
-            rtn = getattr(self, cmdname[1])() # run function named self.cmdname[1](input)
-        except Exception as e:
-            logging.info(e)
-            rtn = "command not found or argument!"
-        return rtn
+        if self.check_token():
+            cmdname = self.rqbody['command'].split("/")
+            try:
+                rtn = getattr(self, cmdname[1])() # run function named self.cmdname[1](input)
+            except Exception as e:
+                logging.info(e)
+                rtn = "command not found or argument!"
+            return rtn
+        else:
+            return "token fail"
 
     #cmd = body_list['text'].split('+')
     def devicecheckout(self):
