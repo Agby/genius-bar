@@ -21,15 +21,6 @@ class GeniusEvent(Base, BaseMixin):
 class GeniusEventQuery(BaseQuery):
     model_class = GeniusEvent
 
-    # @classmethod
-    # def get_event(cls, session):
-    #     try:
-    #         return session.query(GeniusEvent)\
-    #             .order_by(cls.model_class.id.desc())\
-    #             .limit(20)
-    #     except exc.NoResultFound:
-    #         return None
-
     @classmethod
     def get_event(cls, session, input_type=None, limit=20):
         if input_type == None:
