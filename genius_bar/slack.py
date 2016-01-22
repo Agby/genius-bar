@@ -20,6 +20,7 @@ class SlackManager(object):
         self.request = request
         self.rqbody = request.params
         self.session = self.dbSetting()
+        self.slack_url = self.settings['slack_url']
 
     def dbSetting(self):
         # sqlalchemy DBSession
@@ -40,6 +41,7 @@ class SlackManager(object):
 
         return self.request.params['token'] in token_list
 
+    # inpute data trasns /command -> command  
     def command_manager(self):
         if self.check_token():
             cmdname = self.rqbody['command'].split("/")
@@ -53,33 +55,43 @@ class SlackManager(object):
         else:
             return "token fail"
 
-    #cmd = body_list['text'].split('+')
     def devicecheckout(self):
-        return "devicecheckout"
+        self.session.flush()
+        try:
+            check_device = GeniusDeviceQuery.get_by_name(self.session, self.rqbody['text'])
+            if check_device == None: # device not exist 
+                rtn = {"color" : "warning", "text": "Device not found."}
+            else :
+                check_user = self.user_find()
+                check_device.holder_id = check_user.id
+                self.session.commit()
+                payloadmsg = "[%s] Checkout the device [%s]" % (check_user.user_name, check_device.device_name)
+                payload = {"attachments": [{"color" : "danger", "text": payloadmsg }]}
+                r = requests.post(self.slack_url, json=payload) # post message to channel
+                rtn = {"text": "Checkout finisth!",
+                               "attachments": [{"color" : "warning" , "text" : payloadmsg }]}
+                self.add_event("checkout", check_device.id, check_user.id)
+        except Exception as e:
+            self.session.rollback()
+            rtn = e
+        return rtn
+
     def devicelist(self):
         self.session.flush()
         query_device = GeniusDeviceQuery.get_enable_device(self.session)
-        message = "\nDevice name -> Holder\n"
-        logging.info(query_device)
+        message = "\nDevice name\tHolder\n"
         for x in query_device:
-            message = message + ("%s  ->  %s\n" % (x.device_name, x.genius_user.user_name ))
-        logging.info(message)
+            message = message + ("%16s\t%16s\n" % (x.device_name, x.genius_user.user_name ))
         rtn = {"text": "Device List",
                                "attachments": [{"color" : "good" , "text" : message}]}
         return rtn
+
     def devicereg(self):
         try:
             self.session.flush()
             check_device = GeniusDeviceQuery.get_by_name(self.session, self.rqbody['text'])
             if check_device == None: # device not exist 
-                check_user = GeniusUserQuery.get_by_name(self.session, self.rqbody['user_name'])
-                if check_user == None: # user not exist 
-                    input_user = GeniusUser(user_name = self.rqbody['user_name'], 
-                                            slack_user_id = self.rqbody['user_id'])
-                    self.session.add(input_user)
-                    self.session.commit()
-                    check_user = GeniusUserQuery.get_by_name(self.session, self.rqbody['user_name'])
-                
+                check_user = self.user_find()
                 input_device = GeniusDevice(device_name = self.rqbody['text'], holder_id = check_user.id)
                 self.session.add(input_device)
                 self.session.commit()
@@ -95,42 +107,60 @@ class SlackManager(object):
             self.session.rollback()
             print(e)
         return rtn
+
     def devicedereg(self):
         try:
             self.session.flush()
             check_device = GeniusDeviceQuery.get_by_name(self.session, self.rqbody['text'])
             if check_device is not None: # device exist 
-                check_user = GeniusUserQuery.get_by_name(self.session, self.rqbody['user_name'])
-                if check_user == None: # user exist 
-                    input_user = GeniusUser(user_name = self.rqbody['user_name'], 
-                                            slack_user_id = self.rqbody['user_id'])
-                    self.session.add(input_user)
-                    self.session.commit()
-                    check_user = GeniusUserQuery.get_by_name(self.session, self.rqbody['user_name'])
+                check_user = self.user_find()
                 check_device.delete = True 
                 self.session.commit()
                 message = "Device id: " + str(check_device.id) + "  Device name: " + check_device.device_name
                 logging.info(message)
                 rtn = {"text": "Deregist finisth!",
-                               "attachments": [{"color" : "warning" , "text" : message}]}
+                               "attachments": [{"color" : "good" , "text" : message}]}
                 self.add_event("dereg", check_device.id, check_user.id)
                 payloadmsg = "[%s] deregist the device [%s]" % (check_user.user_name, check_device.device_name)
-                payload = {"color" : "warning", "text": payloadmsg}
-                r = requests.post("https://hooks.slack.com/services/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", json=payload)
+                payload = {"attachments": [{"color" : "warning" , "text" : message}]}
+                r = requests.post(self.slack_url, json=payload)
             else:
                 rtn = {"text": "Device not exist!"}
         except Exception as e:
             self.session.rollback()
             print(e)
         return rtn
-    def deviceaudit():
 
-        return "deviceaudit"
+    # list event data 20
+    def deviceaudit(self):
+        self.session.flush()
+        query_event = GeniusEventQuery.get_event(self.session)
+        logging.info(len(list(query_event)))
+        message = "%20s\t%10s\t%16s\t%s\n%" % ("Time", "Type", "Device", "User")
+        for x in query_event:
+            message = message + "%20s\t%10s\t%16s\t%s\n" % ( str(x.event_time), x.event_type, 
+                                                      x.genius_device.device_name, x.genius_user.user_name )
+        rtn = {"text": "Device Audit",
+                "attachments": [{"color" : "good" , "text" : message}]}
+        logging.info(message)
+        return rtn
+
+    def user_find(self):
+        check_user = GeniusUserQuery.get_by_name(self.session, self.rqbody['user_name'])
+        if check_user == None: # user not exist 
+            input_user = GeniusUser(user_name = self.rqbody['user_name'], 
+                                    slack_user_id = self.rqbody['user_id'])
+            self.session.add(input_user)
+            self.session.commit()
+            check_user = GeniusUserQuery.get_by_name(self.session, self.rqbody['user_name'])
+        return check_user
+
+    # add data into device_event  "checkout" "reg" "dereg"
     def add_event(self, event_type, event_device_id, event_user_id):
+        check_user = GeniusUserQuery.get_by_name(self.session, self.rqbody['user_name'])
         try:
             self.session.flush()
-            if event_type == "reg" or event_type == "dereg":
-                input_event = GeniusEvent(event_type = event_type, device_id = event_device_id, user_id = event_user_id)
+            input_event = GeniusEvent(event_type = event_type, device_id = event_device_id, user_id = event_user_id)
             self.session.add(input_event)
             self.session.commit()
         except Exception as e:
