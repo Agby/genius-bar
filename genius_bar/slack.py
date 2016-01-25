@@ -47,7 +47,7 @@ class SlackManager(object):
             cmdname = self.rqbody['command'].split("/")
             try:
                 rtn = getattr(self, cmdname[1])() # run function named self.cmdname[1](input)
-            except Exception as e:
+            except AttributeError as e:
                 logging.info(e)
                 rtn = "command not found or argument!"
             DBSession.remove()
