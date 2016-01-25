@@ -117,15 +117,20 @@ class SlackManager(object):
     def devicedereg(self):
         try:
             self.session.flush()
-            check_device = GeniusDeviceQuery.get_by_name(self.session, self.rqbody['text'])
+            cmd = self.rqbody['text'].split(' ', 1)
+            check_device = GeniusDeviceQuery.get_by_name(self.session, cmd[0])
+            reason = " "
+            if len(cmd) > 1:
+                reason = cmd[1]
             if check_device is not None: # device exist 
                 check_user = self.user_find()
+                check_device.remarks = reason
                 check_device.delete = True 
                 self.session.commit()
-                message = "Device id: " + str(check_device.id) + "  Device name: " + check_device.device_name
+                message = "Device id: " + str(check_device.id) + "  Device name: " + check_device.device_name + " reason: ", reason
                 logging.info(message)
                 rtn = {"text": "Deregist finisth!",
-                               "attachments": [{"color" : "good" , "text" : message}]}
+                               "attachments": [{"color" : "good" , "text" : message }]}
                 self.add_event("dereg", check_device.id, check_user.id)
                 payloadmsg = "[%s] deregist the device [%s]" % (check_user.user_name, check_device.device_name)
                 payload = {"attachments": [{"color" : "warning" , "text" : message}]}
@@ -136,7 +141,6 @@ class SlackManager(object):
             self.session.rollback()
             logging.info(e)
         return rtn
-
     # list event data 20
     def deviceaudit(self):
         self.session.flush()
