@@ -141,11 +141,10 @@ class SlackManager(object):
     def deviceaudit(self):
         self.session.flush()
         cmd = self.rqbody['text']
-        if cmd is not None : 
-            query_event = GeniusEventQuery.get_event(self.session, None, cmd)
+        if len(cmd) is not 0 : 
+            query_event = GeniusEventQuery.get_event(self.session, cmd)
         else :
             query_event = GeniusEventQuery.get_event(self.session)
-        logging.info(len(list(query_event)))
         message = "```\n%35s%20s%26s%26s\n" % ("Time", "Type", "Device", "User")
         for x in query_event:
             message = message + "%35s%20s%26s%26s\n" % ( str(x.event_time), x.event_type, 
@@ -155,7 +154,6 @@ class SlackManager(object):
                 "attachments": [{"color" : "good" ,                 
                                  "text" : message + "```",
                                  "mrkdwn_in" : ["text"]}]}
-        logging.info(message)
         return rtn
 
     def user_find(self):

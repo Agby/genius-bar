@@ -22,8 +22,8 @@ class GeniusEventQuery(BaseQuery):
     model_class = GeniusEvent
 
     @classmethod
-    def get_event(cls, session, input_type=None, limit=20):
-        if input_type == None:
+    def get_event(cls, session, input_name=None, limit=20):
+        if input_name is None:
             try:
                 return session.query(GeniusEvent)\
                     .order_by(cls.model_class.id.desc())\
@@ -33,7 +33,8 @@ class GeniusEventQuery(BaseQuery):
         else:
             try:
                 return session.query(GeniusEvent)\
-                    .filter(GeniusEvent.event_type == input_type)\
+                    .join(GeniusDevice)\
+                    .filter(GeniusDevice.device_name == input_name)\
                     .order_by(cls.model_class.id.desc())\
                     .limit(limit)
             except exc.NoResultFound:
