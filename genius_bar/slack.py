@@ -73,17 +73,22 @@ class SlackManager(object):
                 self.add_event("checkout", check_device.id, check_user.id)
         except Exception as e:
             self.session.rollback()
+            logging.info(e)
             rtn = e
         return rtn
 
     def devicelist(self):
         self.session.flush()
         query_device = GeniusDeviceQuery.get_enable_device(self.session)
-        message = "\nDevice name\tHolder\n"
+        message = "```\n{0:<16}{1:<16}\n".format("Device", "Holder")
         for x in query_device:
-            message = message + ("%16s\t%16s\n" % (x.device_name, x.genius_user.user_name ))
-        rtn = {"text": "Device List",
-                               "attachments": [{"color" : "good" , "text" : message}]}
+            message = message + ("\n{0:<16}{1:<16}\n".format(x.device_name, x.genius_user.user_name ))
+        rtn = {"text": "Device List", "attachments": [
+            {
+                "color" : "good",
+                "text" : message + "```",
+                "mrkdwn_in" : ["text"]
+            }]}
         return rtn
 
     def devicereg(self):
@@ -98,14 +103,15 @@ class SlackManager(object):
                 check_device = GeniusDeviceQuery.get_by_name(self.session, self.rqbody['text'])
                 message = "Device id: " + str(check_device.id) + "  Device name: " + check_device.device_name
                 logging.info(message)
-                rtn = {"text": "Regist finisth!",
-                               "attachments": [{"color" : "good" , "text" : message}]}
+                rtn = {"text" : "Regist finisth!",
+                               "attachments" : [{"color" : "good" ,
+                                                "text" : message}]}
                 self.add_event("reg", check_device.id, check_user.id)
             else:
-                rtn = {"text": "Device is already exist! Maybe you need to regist with a new name."}
+                rtn = {"text" : "Device is already exist! Maybe you need to regist with a new name."}
         except Exception as e:
             self.session.rollback()
-            print(e)
+            logging.info(e)
         return rtn
 
     def devicedereg(self):
@@ -125,23 +131,30 @@ class SlackManager(object):
                 payload = {"attachments": [{"color" : "warning" , "text" : message}]}
                 r = requests.post(self.slack_url, json=payload)
             else:
-                rtn = {"text": "Device not exist!"}
+                rtn = {"text" : "Device not exist!"}
         except Exception as e:
             self.session.rollback()
-            print(e)
+            logging.info(e)
         return rtn
 
     # list event data 20
     def deviceaudit(self):
         self.session.flush()
-        query_event = GeniusEventQuery.get_event(self.session)
+        cmd = self.rqbody['text']
+        if cmd is not None : 
+            query_event = GeniusEventQuery.get_event(self.session, None, cmd)
+        else :
+            query_event = GeniusEventQuery.get_event(self.session)
         logging.info(len(list(query_event)))
-        message = "%20s\t%10s\t%16s\t%s\n%" % ("Time", "Type", "Device", "User")
+        message = "```\n%35s%20s%26s%26s\n" % ("Time", "Type", "Device", "User")
         for x in query_event:
-            message = message + "%20s\t%10s\t%16s\t%s\n" % ( str(x.event_time), x.event_type, 
+            message = message + "%35s%20s%26s%26s\n" % ( str(x.event_time), x.event_type, 
                                                       x.genius_device.device_name, x.genius_user.user_name )
+
         rtn = {"text": "Device Audit",
-                "attachments": [{"color" : "good" , "text" : message}]}
+                "attachments": [{"color" : "good" ,                 
+                                 "text" : message + "```",
+                                 "mrkdwn_in" : ["text"]}]}
         logging.info(message)
         return rtn
 
