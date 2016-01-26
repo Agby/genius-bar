@@ -25,7 +25,7 @@ class GeniusEventQuery(BaseQuery):
         if input_name is None:
             try:
                 return self.session.query(GeniusEvent)\
-                    .order_by(cls.model_class.id.desc())\
+                    .order_by(GeniusEvent.id.desc())\
                     .limit(limit)
             except exc.NoResultFound:
                 return None
@@ -34,7 +34,7 @@ class GeniusEventQuery(BaseQuery):
                 return self.session.query(GeniusEvent)\
                     .join(GeniusDevice)\
                     .filter(GeniusDevice.device_name == input_name)\
-                    .order_by(cls.model_class.id.desc())\
+                    .order_by(GeniusEvent.id.desc())\
                     .limit(limit)
             except exc.NoResultFound:
                 return None

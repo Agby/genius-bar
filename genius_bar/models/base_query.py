@@ -7,15 +7,15 @@ class BaseQuery(object):
     def __init__(self, session):
         self.session = session
 
-    def get_by_id(cls, id):
+    def get_by_id(self, id):
         try:
-            return self.session.query(cls.model_class)\
-                .filter(cls.model_class.id == id)\
+            return self.session.query(self.model_class)\
+                .filter(self.model_class.id == id)\
                 .one()
         except exc.NoResultFound:
             return None
 
-    def get_all(cls):
-        return self.session.query(cls.model_class)\
-            .order_by(cls.model_class.id.asc())\
+    def get_all(self):
+        return self.session.query(self.model_class)\
+            .order_by(self.model_class.id.asc())\
             .all()

@@ -17,7 +17,7 @@ class GeniusDevice(Base):
     delete = sa.Column(sa.Boolean, default=0, nullable=False)
     remarks = sa.Column(sa.Unicode(32))
 
-    genius_user = orm.relationship('GeniusUser')
+    holder = orm.relationship('GeniusUser')
 
 
 class GeniusDeviceQuery(BaseQuery):
@@ -35,6 +35,7 @@ class GeniusDeviceQuery(BaseQuery):
         try:
             return self.session.query(GeniusDevice)\
                 .filter(GeniusDevice.device_name == device_name)\
+                .filter(GeniusDevice.delete == False)\
                 .one()
         except exc.NoResultFound:
             return None
