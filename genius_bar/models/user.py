@@ -17,9 +17,9 @@ class GeniusUser(Base):
 class GeniusUserQuery(BaseQuery):
     model_class = GeniusUser
 
-    def get_by_name(dbsession, user_name):
+    def get_by_name(self, user_name):
         try:
-            return dbsession.query(GeniusUser)\
+            return self.session.query(GeniusUser)\
                 .filter(GeniusUser.user_name == user_name)\
                 .one()
         except exc.NoResultFound:

@@ -23,34 +23,34 @@ class GeniusDevice(Base):
 class GeniusDeviceQuery(BaseQuery):
     model_class = GeniusDevice
 
-    def get_enable_device(session):
+    def get_enable_device(self):
         try:
-            return session.query(GeniusDevice)\
+            return self.session.query(GeniusDevice)\
                 .filter(GeniusDevice.delete == False)\
                 .all()
         except exc.NoResultFound:
             return None
 
-    def get_by_name(session, device_name):
+    def get_by_name(self, device_name):
         try:
-            return session.query(GeniusDevice)\
+            return self.session.query(GeniusDevice)\
                 .filter(GeniusDevice.device_name == device_name)\
                 .one()
         except exc.NoResultFound:
             return None
 
-    def get_by_holder(session, holder):
+    def get_by_holder(self, holder):
         try:
-            return session.query(GeniusDevice)\
+            return self.session.query(GeniusDevice)\
                 .filter(GeniusDevice.holder_id == holder.id)\
                 .filter(GeniusDevice.delete == False)\
                 .all()
         except exc.NoResultFound:
             return None
 
-    def get_device_by_holder_name(session, name):
+    def get_device_by_holder_name(self, name):
         try:
-            return session.query(GeniusDevice)\
+            return self.session.query(GeniusDevice)\
                 .join(GeniusUser)\
                 .filter(GeniusUser.user_name == name)\
                 .all()

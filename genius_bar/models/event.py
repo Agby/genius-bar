@@ -21,18 +21,17 @@ class GeniusEvent(Base, BaseMixin):
 class GeniusEventQuery(BaseQuery):
     model_class = GeniusEvent
 
-    @classmethod
-    def get_event(cls, session, input_name=None, limit=20):
+    def get_event(self, input_name=None, limit=20):
         if input_name is None:
             try:
-                return session.query(GeniusEvent)\
+                return self.session.query(GeniusEvent)\
                     .order_by(cls.model_class.id.desc())\
                     .limit(limit)
             except exc.NoResultFound:
                 return None
         else:
             try:
-                return session.query(GeniusEvent)\
+                return self.session.query(GeniusEvent)\
                     .join(GeniusDevice)\
                     .filter(GeniusDevice.device_name == input_name)\
                     .order_by(cls.model_class.id.desc())\
