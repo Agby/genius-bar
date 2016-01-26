@@ -65,11 +65,10 @@ class SlackManager(object):
                 check_user = self.user_find()
                 check_device.holder_id = check_user.id
                 self.session.commit()
-                payloadmsg = "[%s] Checkout the device [%s]" % (check_user.user_name, check_device.device_name)
+                payloadmsg = "@%s  checked out device `%s`" % (check_user.user_name, check_device.device_name)
                 payload = {"attachments": [{"color" : "danger", "text": payloadmsg }]}
                 r = requests.post(self.slack_url, json=payload) # post message to channel
-                rtn = {"text": "Checkout finisth!",
-                               "attachments": [{"color" : "warning" , "text" : payloadmsg }]}
+                rtn = {"attachments": [{"color" : "warning" , "text" : payloadmsg }]}
                 self.add_event("checkout", check_device.id, check_user.id)
         except Exception as e:
             self.session.rollback()
@@ -93,6 +92,10 @@ class SlackManager(object):
 
     def devicereg(self):
         try:
+            if self.rqbody['text'] == "" or self.rqbody['text'].find(" ") is not -1:
+                message = " Update: Please try again with `/devicereg devicename`"
+                rtn = {"text" : message}
+                return rtn
             self.session.flush()
             check_device = GeniusDeviceQuery.get_by_name(self.session, self.rqbody['text'])
             if check_device == None: # device not exist 
@@ -101,17 +104,16 @@ class SlackManager(object):
                 self.session.add(input_device)
                 self.session.commit()
                 check_device = GeniusDeviceQuery.get_by_name(self.session, self.rqbody['text'])
-                message = "Device id: " + str(check_device.id) + "  Device name: " + check_device.device_name
-                logging.info(message)
-                rtn = {"text" : "Regist finisth!",
-                               "attachments" : [{"color" : "good" ,
-                                                "text" : message}]}
+                message = "  Device `%s` registered by @%s" % (check_device.device_name, check_user.user_name)
+                rtn = {"attachments" : [{"color" : "good", "text" : message}]}
                 self.add_event("reg", check_device.id, check_user.id)
             else:
-                rtn = {"text" : "Device is already exist! Maybe you need to regist with a new name."}
+                message = "`%s` already exists. Please register with another name." % (check_device.device_name)
+                rtn = {"text" : message}
         except Exception as e:
             self.session.rollback()
             logging.info(e)
+        rtn = self.rqbody['text'].find(" ")
         return rtn
 
     def devicedereg(self):
@@ -132,7 +134,7 @@ class SlackManager(object):
                 rtn = {"text": "Deregist finisth!",
                                "attachments": [{"color" : "good" , "text" : message }]}
                 self.add_event("dereg", check_device.id, check_user.id)
-                payloadmsg = "[%s] deregist the device [%s]" % (check_user.user_name, check_device.device_name)
+                payloadmsg = "@%s deregist the device `%s`" % (check_user.user_name, check_device.device_name)
                 payload = {"attachments": [{"color" : "warning" , "text" : message}]}
                 r = requests.post(self.slack_url, json=payload)
             else:
