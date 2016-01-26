@@ -66,9 +66,13 @@ class SlackManager(object):
                 check_device.holder_id = check_user.id
                 self.session.commit()
                 payloadmsg = "@%s  checked out device `%s`" % (check_user.user_name, check_device.device_name)
-                payload = {"attachments": [{"color" : "danger", "text": payloadmsg }]}
+                payload = {"text" : "", "attachments": [{
+                                                        "color" : "danger",
+                                                        "text": payloadmsg,
+                                                        "mrkdwn_in" : ["text"]
+                                                        }]}
                 r = requests.post(self.slack_url, json=payload) # post message to channel
-                rtn = {"attachments": [{"color" : "warning" , "text" : payloadmsg }]}
+                rtn = payload
                 self.add_event("checkout", check_device.id, check_user.id)
         except Exception as e:
             self.session.rollback()
@@ -105,7 +109,11 @@ class SlackManager(object):
                 self.session.commit()
                 check_device = GeniusDeviceQuery.get_by_name(self.session, self.rqbody['text'])
                 message = "  Device `%s` registered by @%s" % (check_device.device_name, check_user.user_name)
-                rtn = {"attachments" : [{"color" : "good", "text" : message}]}
+                rtn = {"text" : "", "attachments" : [{
+                                                     "color" : "good", 
+                                                     "text" : message, 
+                                                     "mrkdwn_in" : ["text"]
+                                                     }]}
                 self.add_event("reg", check_device.id, check_user.id)
             else:
                 message = "`%s` already exists. Please register with another name." % (check_device.device_name)
@@ -113,7 +121,6 @@ class SlackManager(object):
         except Exception as e:
             self.session.rollback()
             logging.info(e)
-        rtn = self.rqbody['text'].find(" ")
         return rtn
 
     def devicedereg(self):
@@ -129,13 +136,14 @@ class SlackManager(object):
                 check_device.remarks = reason
                 check_device.delete = True 
                 self.session.commit()
-                message = "Device id: " + str(check_device.id) + "  Device name: " + check_device.device_name + " reason: ", reason
-                logging.info(message)
-                rtn = {"text": "Deregist finisth!",
-                               "attachments": [{"color" : "good" , "text" : message }]}
                 self.add_event("dereg", check_device.id, check_user.id)
                 payloadmsg = "@%s deregist the device `%s`" % (check_user.user_name, check_device.device_name)
-                payload = {"attachments": [{"color" : "warning" , "text" : message}]}
+                payload = {"text" : "", "attachments": [{
+                                                        "color" : "warning",
+                                                        "text" : payloadmsg,
+                                                        "mrkdwn_in" : ["text"]
+                                                        }]}
+                rtn = payload
                 r = requests.post(self.slack_url, json=payload)
             else:
                 rtn = {"text" : "Device not exist!"}
@@ -151,15 +159,17 @@ class SlackManager(object):
             query_event = GeniusEventQuery.get_event(self.session, cmd)
         else :
             query_event = GeniusEventQuery.get_event(self.session)
-        message = "```\n%35s%20s%26s%26s\n" % ("Time", "Type", "Device", "User")
+        message = "```\n%30s%16s%16s%16s\n" % ("Time", "Type", "Device", "User")
         for x in query_event:
-            message = message + "%35s%20s%26s%26s\n" % ( str(x.event_time), x.event_type, 
+            message = message + "%30s%16s%16s%16s\n" % ( str(x.event_time), x.event_type, 
                                                       x.genius_device.device_name, x.genius_user.user_name )
 
         rtn = {"text": "Device Audit",
-                "attachments": [{"color" : "good" ,                 
-                                 "text" : message + "```",
-                                 "mrkdwn_in" : ["text"]}]}
+                "attachments": [{
+                                "color" : "good" ,                 
+                                "text" : message + "```",
+                                "mrkdwn_in" : ["text"]
+                                }]}
         return rtn
 
     def user_find(self):
