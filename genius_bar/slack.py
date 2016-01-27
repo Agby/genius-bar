@@ -67,7 +67,7 @@ class SlackManager(object):
                                                         }]}
                 r = requests.post(self.slack_url, json=payload) # post message to channel
                 rtn = payload
-                self.add_event("checkout", check_device.id, check_user.id)
+                self.add_event("checkout", check_device, check_user)
         except Exception as e:
             logging.info(e)
             rtn = e
@@ -95,7 +95,7 @@ class SlackManager(object):
             check_device = self.device_query.get_by_name(self.rqbody['text'])
             if check_device == None:
                 check_user = self.user_find()
-                input_device = GeniusDevice(device_name = self.rqbody['text'], holder_id = check_user.id)
+                input_device = GeniusDevice(device_name = self.rqbody['text'], holder = check_user)
                 DBSession.add(input_device)
                 check_device = self.device_query.get_by_name(self.rqbody['text'])
                 message = "  Device `%s` registered by @%s" % (check_device.device_name, check_user.user_name)
@@ -104,7 +104,7 @@ class SlackManager(object):
                                                      "text" : message, 
                                                      "mrkdwn_in" : ["text"]
                                                      }]}
-                self.add_event("reg", check_device.id, check_user.id)
+                self.add_event("reg", check_device, check_user)
             else:
                 message = "`%s` already exists. Please register with another name." % (check_device.device_name)
                 rtn = {"text" : message}
@@ -123,7 +123,7 @@ class SlackManager(object):
                 check_user = self.user_find()
                 check_device.remarks = reason
                 check_device.delete = True 
-                self.add_event("dereg", check_device.id, check_user.id)
+                self.add_event("dereg", check_device, check_user)
                 payloadmsg = "@%s deregist the device `%s`" % (check_user.user_name, check_device.device_name)
                 payload = {"text" : "", "attachments": [{
                                                         "color" : "warning",
@@ -169,10 +169,10 @@ class SlackManager(object):
         return check_user
 
     # add data into device_event  "checkout" "reg" "dereg"
-    def add_event(self, event_type, event_device_id, event_user_id):
+    def add_event(self, event_type, event_device, event_user):
         check_user = self.user_query.get_by_name(self.rqbody['user_name'])
         try:
-            input_event = GeniusEvent(event_type = event_type, device_id = event_device_id, user_id = event_user_id)
+            input_event = GeniusEvent(event_type = event_type, device = event_device, user = event_user)
             DBSession.add(input_event)
         except Exception as e:
             logging.info(e)

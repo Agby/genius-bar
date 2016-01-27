@@ -14,8 +14,8 @@ class GeniusEvent(Base, BaseMixin):
     device_id = sa.Column(sa.Integer, sa.ForeignKey('genius_device.id'))
     user_id = sa.Column(sa.Integer, sa.ForeignKey('genius_user.id'))
     event_type = sa.Column(sa.Unicode(16), nullable=False)
-    genius_user = orm.relationship('GeniusUser')
-    genius_device = orm.relationship('GeniusDevice')
+    user = orm.relationship('GeniusUser')
+    device = orm.relationship('GeniusDevice')
 
 
 class GeniusEventQuery(BaseQuery):
