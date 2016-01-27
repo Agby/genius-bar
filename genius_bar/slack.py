@@ -1,5 +1,4 @@
 import logging
-import pyramid.threadlocal
 import requests
 from pyramid.decorator import reify
 from genius_bar.models.user import GeniusUser, GeniusUserQuery
@@ -10,8 +9,15 @@ import transaction
 
 class SlackManager(object):
     def __init__(self, request):
-        self.registry = pyramid.threadlocal.get_current_registry()
-        self.settings = self.registry.settings
+        self.settings = request.registry.settings
+        self._token_map = {
+            self.settings['device_checkout_token']: self.device_checkout,
+            self.settings['device_list_token']: self.device_list,
+            self.settings['device_reg_token']: self.device_reg,
+            self.settings['device_dereg_token']: self.device_dereg,
+            self.settings['device_audit_token']: self.device_audit,
+        }
+
         self.request = request
         self.rqbody = request.params
         self.slack_url = self.settings['slack_url']
@@ -28,32 +34,24 @@ class SlackManager(object):
     def event_query(self):
         return GeniusEventQuery(DBSession)
 
-    def check_token(self):
-        token_list = []
-        token_list.append(self.settings['device_checkout_token'])
-        token_list.append(self.settings['device_list_token'])
-        token_list.append(self.settings['device_reg_token'])
-        token_list.append(self.settings['device_dereg_token'])
-        token_list.append(self.settings['device_audit_token']) 
+    def token_method(self, token):
+        return self._token_map.get(token, None)
 
-        return self.request.params['token'] in token_list
-
-    # inpute data trasns /command -> command  
+    # inpute data trasns /command -> command 
     def command_manager(self):
-        if self.check_token():
-            cmdname = self.rqbody['command'].split("/")
-            try:
-                rtn = getattr(self, cmdname[1])() # run function named self.cmdname[1](input)
-            except AttributeError as e:
-                logging.info(e)
-                rtn = "command not found or argument!"
-            DBSession.commit()
-            DBSession.close()
-            return rtn
-        else:
-            return "token fail"
+        command = self.rqbody['command'].split("/")
+        action = self.token_method(self.request.params['token'])
+        action_command = (action.__name__).replace("_", "")
+        if action is None:
+            return "Token fails"
+        if action_command != command[1]:
+            return "Token valid, but map to incorrect action."
+        rtn = action()
+        DBSession.commit()
+        DBSession.close()
+        return rtn
 
-    def devicecheckout(self):
+    def device_checkout(self):
         try:
             check_device = self.device_query.get_by_name(self.rqbody['text'])
             if check_device == None: # device not exist 
@@ -75,9 +73,9 @@ class SlackManager(object):
             rtn = e
         return rtn
 
-    def devicelist(self):
+    def device_list(self):
         query_device = self.device_query.get_enable_device()
-        message = "```\n{0:<16}{1:<16}\n".format("Device", "Holder")
+        message = "```\n{0:<16}{1:<16}\n".format("Device", "Holder") # format output 
         for x in query_device:
             message = message + ("\n{0:<16}{1:<16}\n".format(x.device_name, x.holder.user_name ))
         rtn = {"text": "Device List", "attachments": [
@@ -88,7 +86,7 @@ class SlackManager(object):
             }]}
         return rtn
 
-    def devicereg(self):
+    def device_reg(self):
         try:
             if self.rqbody['text'] == "" or self.rqbody['text'].find(" ") is not -1:
                 message = " Update: Please try again with `/devicereg devicename`"
@@ -114,7 +112,7 @@ class SlackManager(object):
             rtn = e
         return rtn
 
-    def devicedereg(self):
+    def device_dereg(self):
         try:
             cmd = self.rqbody['text'].split(' ', 1)
             check_device = self.device_query.get_by_name(cmd[0])
@@ -142,7 +140,7 @@ class SlackManager(object):
         return rtn
 
     # list event data 20
-    def deviceaudit(self):
+    def device_audit(self):
         cmd = self.rqbody['text']
         if len(cmd) is not 0 : 
             query_event = self.event_query.get_event(cmd)
