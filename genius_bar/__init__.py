@@ -13,7 +13,6 @@ def main(global_config, **settings):
     config = Configurator(settings=settings)
     sqlalchemy_url  = settings['sqlalchemy_url']
     engine = create_engine(sqlalchemy_url)
-    # DBSession.configure(bind=engine, extension=ZopeTransactionExtension())
     DBSession.configure(bind=engine)
     Base.metadata.bind = engine
 
